@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+MIN_MATCH_COUNT = 15
+
 img_untold = cv2.imread('untold-ar.jpeg')
 img_untold = cv2.resize(img_untold, (0,0), fx=0.25, fy=0.25)
 video_untold = cv2.VideoCapture('untold-intro.mp4')
@@ -35,6 +37,17 @@ while True:
             if m.distance < 0.75 * n.distance:
                 good.append([m])
         img3 = cv2.drawMatchesKnn(img_untold, kp, webcamImg, kp2, good, flags=2, outImg=None)
+
+        if len(good) > MIN_MATCH_COUNT:
+            src_pts = np.float32([kp[m.queryIdx].pt for [m] in good]).reshape(-1, 1, 2)
+            dst_pts = np.float32([kp2[m.trainIdx].pt for [m] in good]).reshape(-1, 1, 2)
+            M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+            #Calculate the outliers
+            # src_pts_kp = [kp[m.queryIdx].pt for [m] in good]
+            #
+            # correct_matched_kp = [src_pts_kp[i] for i in range(len(src_pts_kp)) if mask[i]]
+            # print(correct_matched_kp)
+
         cv2.imshow('Maching', img3)
 
     cv2.imshow('Webcam', webcamImg)
