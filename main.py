@@ -48,12 +48,16 @@ while True:
             # correct_matched_kp = [src_pts_kp[i] for i in range(len(src_pts_kp)) if mask[i]]
             # print(correct_matched_kp)
 
-        cv2.imshow('Maching', img3)
+            src_bnd_pts = np.float32([[0,0],[0,hI],[wI,hI],[wI,0]]).reshape(-1,1,2)
+            dst_bnd_pts = cv2.perspectiveTransform(src_bnd_pts,M)
+            cv2.polylines(webcamImg, [np.int32(dst_bnd_pts)], True, (0, 255, 0))
+
+        cv2.imshow('Matching', img3)
 
     cv2.imshow('Webcam', webcamImg)
-    cv2.imshow('Untold Image', img_untold)
-    cv2.imshow('Untold Video', videoImg)
-    if cv2.waitKey(1) & 0xFF==ord('q'):
+    # cv2.imshow('Untold Image', img_untold)
+    # cv2.imshow('Untold Video', videoImg)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 webcam.release()
