@@ -6,11 +6,11 @@ MIN_MATCH_COUNT = 15
 img_untold = cv2.imread('untold-ar.jpeg')
 img_untold = cv2.resize(img_untold, (0,0), fx=0.25, fy=0.25)
 video_untold = cv2.VideoCapture('untold-intro.mp4')
-webcam = cv2.VideoCapture(0)
-
+video_untold.set(1, 854)
 success, videoImg = video_untold.read()
 hI, wI, cI = img_untold.shape
 videoImg = cv2.resize(videoImg, (wI, hI))
+webcam = cv2.VideoCapture(0)
 
 orb = cv2.ORB_create(nfeatures=1000)
 kp, desc = orb.detectAndCompute(img_untold, None)
@@ -25,6 +25,7 @@ bf = cv2.BFMatcher(cv2.NORM_HAMMING)
 
 while True:
     success2, webcamImg = webcam.read()
+    webcamImg_ar = webcamImg.copy()
     kp2, desc2 = orb.detectAndCompute(webcamImg, None)
     # webcamImg = cv2.drawKeypoints(webcamImg, kp2, None)
     if desc2 is not None:
@@ -50,14 +51,24 @@ while True:
 
             src_bnd_pts = np.float32([[0,0],[0,hI],[wI,hI],[wI,0]]).reshape(-1,1,2)
             dst_bnd_pts = cv2.perspectiveTransform(src_bnd_pts,M)
-            cv2.polylines(webcamImg, [np.int32(dst_bnd_pts)], True, (0, 255, 0))
+            cv2.polylines(webcamImg, [np.int32(dst_bnd_pts)], True, (0, 0, 255), thickness=2)
 
-        cv2.imshow('Matching', img3)
+            videoWarped = cv2.warpPerspective(videoImg,M, (webcamImg.shape[1], webcamImg.shape[0]))
+            maskWin = np.zeros((webcamImg.shape[0], webcamImg.shape[1]), np.uint8)
+            cv2.fillPoly(maskWin,[np.int32(dst_bnd_pts)], (255,255,255))
+            maskWinInv = cv2.bitwise_not(maskWin)
+            webcamImg_ar = cv2.bitwise_and(webcamImg_ar, webcamImg_ar, mask=maskWinInv)
+            webcamImg_ar = cv2.bitwise_or(videoWarped, webcamImg_ar)
 
-    cv2.imshow('Webcam', webcamImg)
+            cv2.imshow('Video Warped', videoWarped)
+            cv2.imshow('Mask Window', webcamImg_ar)
+
+        # cv2.imshow('Matching', img3)
+
+    # cv2.imshow('Webcam', webcamImg)
     # cv2.imshow('Untold Image', img_untold)
     # cv2.imshow('Untold Video', videoImg)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(50) & 0xFF == ord('q'):
         break
 
 webcam.release()
