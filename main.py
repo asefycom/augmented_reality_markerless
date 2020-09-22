@@ -2,11 +2,13 @@ import cv2
 import numpy as np
 
 MIN_MATCH_COUNT = 15
+frmNumber = 0
+objDetected = False
 
 img_untold = cv2.imread('untold-ar.jpeg')
 img_untold = cv2.resize(img_untold, (0,0), fx=0.25, fy=0.25)
 video_untold = cv2.VideoCapture('untold-intro.mp4')
-video_untold.set(1, 854)
+# video_untold.set(1, 854)
 success, videoImg = video_untold.read()
 hI, wI, cI = img_untold.shape
 videoImg = cv2.resize(videoImg, (wI, hI))
@@ -26,6 +28,17 @@ bf = cv2.BFMatcher(cv2.NORM_HAMMING)
 while True:
     success2, webcamImg = webcam.read()
     webcamImg_ar = webcamImg.copy()
+
+    if objDetected == True:
+        if frmNumber == video_untold.get(cv2.CAP_PROP_FRAME_COUNT):
+            video_untold.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            frmNumber = 0
+        success, videoImg = video_untold.read()
+        videoImg = cv2.resize(videoImg, (wI, hI))
+    else:
+        video_untold.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        frmNumber = 0
+
     kp2, desc2 = orb.detectAndCompute(webcamImg, None)
     # webcamImg = cv2.drawKeypoints(webcamImg, kp2, None)
     if desc2 is not None:
@@ -40,6 +53,7 @@ while True:
         img3 = cv2.drawMatchesKnn(img_untold, kp, webcamImg, kp2, good, flags=2, outImg=None)
 
         if len(good) > MIN_MATCH_COUNT:
+            objDetected = True
             src_pts = np.float32([kp[m.queryIdx].pt for [m] in good]).reshape(-1, 1, 2)
             dst_pts = np.float32([kp2[m.trainIdx].pt for [m] in good]).reshape(-1, 1, 2)
             M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
@@ -60,7 +74,11 @@ while True:
             webcamImg_ar = cv2.bitwise_and(webcamImg_ar, webcamImg_ar, mask=maskWinInv)
             webcamImg_ar = cv2.bitwise_or(videoWarped, webcamImg_ar)
 
-            cv2.imshow('Video Warped', videoWarped)
+            # cv2.imshow('Video Warped', videoWarped)
+            cv2.imshow('Mask Window', webcamImg_ar)
+        else:
+            objDetected = False
+            webcamImg_ar = webcamImg
             cv2.imshow('Mask Window', webcamImg_ar)
 
         # cv2.imshow('Matching', img3)
@@ -68,8 +86,9 @@ while True:
     # cv2.imshow('Webcam', webcamImg)
     # cv2.imshow('Untold Image', img_untold)
     # cv2.imshow('Untold Video', videoImg)
-    if cv2.waitKey(50) & 0xFF == ord('q'):
+    if cv2.waitKey(35) & 0xFF == ord('q'):
         break
+    frmNumber += 1
 
 webcam.release()
 cv2.destroyAllWindows()
